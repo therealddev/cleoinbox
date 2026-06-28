@@ -1,0 +1,14 @@
+{
+  "name": "cleoinbox",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cleoinbox monorepo — local desktop inbox manager",
+  "scripts": {
+    "dev": "pnpm --filter @cleoinbox/desktop dev",
+    "build": "pnpm --filter @cleoinbox/desktop build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
