@@ -32,3 +32,43 @@ export interface RuleCommand {
   /** Whether to also archive currently-matching mail (v1: archive only). */
   applyToBacklog: boolean
 }
+
+/** A connected Gmail account. Persisted (non-secret) in accounts.json; the
+ *  OAuth tokens live in the OS keychain keyed by email. */
+export interface Account {
+  email: string
+  /** ISO-8601 timestamp the account was connected. */
+  addedAt: string
+}
+
+/** One inbox message, trimmed to what the UI renders. */
+export interface InboxMessage {
+  id: string
+  threadId: string
+  from: string
+  subject: string
+  /** RFC 2822 Date header, verbatim from Gmail. */
+  date: string
+  unread: boolean
+  snippet: string
+}
+
+export interface SettingsStatus {
+  hasGoogleClient: boolean
+}
+
+export interface ConnectResult {
+  email: string
+}
+
+/** The typed IPC surface the preload bridge exposes on `window.api` — the one
+ *  contract between the React renderer and the Electron main process. Secrets
+ *  never cross it. */
+export interface CleoApi {
+  getStatus: () => Promise<SettingsStatus>
+  setGoogleClient: (clientId: string, clientSecret: string) => Promise<void>
+  listAccounts: () => Promise<Account[]>
+  connectAccount: () => Promise<ConnectResult>
+  removeAccount: (email: string) => Promise<void>
+  listInbox: (email: string) => Promise<InboxMessage[]>
+}

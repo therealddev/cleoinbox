@@ -22,7 +22,9 @@
   },
   "dependencies": {
     "@cleoinbox/shared": "workspace:*",
-    "@electron-toolkit/utils": "^4.0.0"
+    "@electron-toolkit/utils": "^4.0.0",
+    "@googleapis/gmail": "^17.0.0",
+    "google-auth-library": "^10.9.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
