@@ -177,9 +177,9 @@ Monorepo (pnpm workspace):
   <section class="section">
     <h2>7. v1 build order</h2>
     <ol>
-      <li><strong>opal-source guard.</strong> <code>opal init</code>; confirm no secrets or personal data can reach the public remote before any code lands — work safe from step one.</li>
-      <li><strong>Electron.</strong> Install and boot Electron from a vetted, 2026-current guide (setup is irreversible — see Decisions).</li>
-      <li><strong>Monorepo skeleton.</strong> pnpm workspace; shared types; server stub; keychain helper.</li>
+      <li>✅ <strong>opal-source guard.</strong> <code>opal init</code>; confirm no secrets or personal data can reach the public remote before any code lands — work safe from step one. <em>— done (0d805ad).</em></li>
+      <li>✅ <strong>Electron.</strong> Install and boot Electron from a vetted, 2026-current guide (setup is irreversible — see Decisions). <em>— done (#1): electron-vite + React/TS, electron 42, hardened (sandbox, appId).</em></li>
+      <li>✅ <strong>Monorepo skeleton.</strong> pnpm workspace; shared types; server stub; keychain helper. <em>— done (#2).</em></li>
       <li><strong>Gmail auth + read.</strong> PKCE OAuth; list inbox; multi-account.</li>
       <li><strong>Chat → filter.</strong> Chat compiles one intent; <code>createFilter</code>; verify in Gmail.</li>
       <li><strong>Backlog + bulk.</strong> <code>applyToBacklog</code>; bulk archive (skip-inbox) only.</li>
@@ -197,7 +197,36 @@ Monorepo (pnpm workspace):
 
   <section class="section">
     <h2>9. Tech stack</h2>
-    <p>Electron (Node main + React/TS renderer) · pnpm workspace monorepo · Gmail API · BYO LLM key · OS keychain (safeStorage) · opal-source (repo guard). No Rust.</p>
+    <p>Electron (Node main + React/TS renderer) · pnpm workspace monorepo · Gmail API · BYO Anthropic key (Claude Haiku 4.5) · OS keychain (safeStorage) · opal-source (repo guard). No Rust.</p>
+  </section>
+
+  <section class="section">
+    <h2>10. Build detail &amp; resolved decisions (steps 4–5)</h2>
+
+    <p><strong>Decisions locked this session:</strong></p>
+    <ul>
+      <li><strong>LLM:</strong> Claude Haiku 4.5 (<code>claude-haiku-4-5</code>; 200K context / 64K output; ~$1 / $5 per 1M input/output). Cheap structured extraction; <strong>BYO Anthropic key</strong>. Runs in the <strong>main process only</strong> — the key never reaches the renderer.</li>
+      <li><strong>Secrets entry:</strong> in-app <strong>Settings UI → OS keychain</strong> (safeStorage). No <code>.env</code> for end users. Both the Google OAuth client ID and the Anthropic key are stored via <code>keychain.ts</code>.</li>
+      <li><strong>OAuth redirect:</strong> loopback <code>http://127.0.0.1:&lt;ephemeral-port&gt;</code> + <strong>PKCE</strong> (Google's current desktop guidance; OOB is deprecated). Google client type = <em>Desktop app</em>.</li>
+      <li><strong>Account persistence:</strong> <code>accounts.json</code> in <code>userData</code> lists <code>{ email, addedAt }</code> (not secret); per-account tokens live in the keychain keyed by email. "No DB" means no relational/server DB — a small app-config JSON is fine.</li>
+      <li><strong>Undo (step 7):</strong> undo = <code>filters.delete</code> (stops future filtering). Un-archiving already-archived backlog is best-effort and <em>out of v1</em>.</li>
+      <li><strong>Tests:</strong> unit-test the RuleCompiler (intent → <code>FilterSpec</code>) against fixtures with a mocked Anthropic client; mock the Gmail API for client tests. No live-network tests in CI.</li>
+    </ul>
+
+    <p><strong>Step 4 — Gmail auth + read:</strong></p>
+    <ul>
+      <li><strong>Flow (main process):</strong> generate PKCE verifier/challenge → open the system browser to Google's authorize URL → start a localhost server on an ephemeral port to catch the redirect code → exchange code + verifier for tokens → store refresh/access tokens in the keychain keyed by account email.</li>
+      <li><strong>Scopes:</strong> <code>gmail.modify</code> (read inbox + archive/skip-inbox) and <code>gmail.settings.basic</code> (create/list/delete filters). Restricted scopes → CASA is phase 2; v1 stays in <em>testing</em> mode (≤100 users, 7-day refresh tokens).</li>
+      <li><strong>Multi-account:</strong> repeat per account; <code>accounts.json</code> enumerates; one <code>GmailClient</code> per account.</li>
+      <li><strong>7-day token expiry</strong> (testing mode) → weekly re-auth; surface a "reconnect" affordance per account.</li>
+    </ul>
+
+    <p><strong>Step 5 — RuleCompiler:</strong></p>
+    <ul>
+      <li><strong>Contract:</strong> input = user intent string; output = validated <code>FilterSpec</code> (from <code>@cleoinbox/shared</code>).</li>
+      <li><strong>Mechanism:</strong> Anthropic Messages API with <strong>structured outputs</strong> — <code>client.messages.parse({ model: 'claude-haiku-4-5', output_config: { format: &lt;json_schema of FilterSpec&gt; } })</code>. Schema needs <code>additionalProperties: false</code>; FilterSpec is strings/booleans/arrays, within the structured-output limits. No <code>thinking</code>/<code>effort</code> (Haiku doesn't support effort).</li>
+      <li><strong>Guardrails:</strong> reject empty criteria or a filter that would match everything; chat shows the <strong>match count</strong> (Gmail search preview) before <code>applyToBacklog</code>; destructive ops already out of v1.</li>
+    </ul>
   </section>
 
 </div>
