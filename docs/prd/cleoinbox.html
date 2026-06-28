@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cleoinbox — PRD</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-elev: #161b22;
+    --bg-code: #1c2128;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --heading: #e6edf3;
+    --accent: #58a6ff;
+    --accent-strong: #79c0ff;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+  h1 {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--heading);
+    letter-spacing: -0.01em;
+    margin: 0 0 .25em;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0 0 2.5em;
+  }
+  h2 {
+    font-size: 1.4rem;
+    font-weight: 650;
+    color: var(--heading);
+    margin: 2.4em 0 .8em;
+    padding-bottom: .3em;
+    border-bottom: 1px solid var(--border);
+  }
+  p { margin: 0 0 1em; }
+  ul, ol { margin: 0 0 1em; padding-left: 1.5em; }
+  li { margin: .4em 0; }
+  li > ul, li > ol { margin: .4em 0; }
+  strong { color: var(--accent-strong); font-weight: 650; }
+  em { color: var(--text-muted); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .12em .4em;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .85em;
+    color: var(--accent-strong);
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    line-height: 1.45;
+    margin: 0 0 1.4em;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+    font-size: .82rem;
+    white-space: pre;
+  }
+  .section {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px 28px 20px;
+    margin: 0 0 18px;
+  }
+  .section h2 { margin-top: 1.1em; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Cleoinbox — PRD</h1>
+  <p class="subtitle">The single spec we build from.</p>
+
+  <section class="section">
+    <h2>1. One-liner</h2>
+    <p>A local desktop app with a <strong>chat sidebar</strong> that manages your inbox by plain-English command — "hide all my Uber receipts and never tell me about them again" — by compiling that intent into a <strong>native Gmail filter</strong> that Google enforces server-side, forever. No backend, no database.</p>
+  </section>
+
+  <section class="section">
+    <h2>2. Decisions log (ADR-style — why this shape)</h2>
+    <ul>
+      <li>The AI runs <strong>once, locally, at rule-creation time.</strong> It translates intent into a Gmail filter spec and writes it via the Gmail API. After that, <strong>Google enforces the filter</strong> on its own servers — machine off or on, no compute of ours, no email stored anywhere by us. The app is a thin local client over the provider's own rule engine. We do not build an email-processing backend.</li>
+      <li><strong>Not Mail.app / AppleScript — Gmail API, server-side filters.</strong></li>
+      <li><strong>Multi-account.</strong></li>
+      <li><strong>Electron, not Tauri.</strong></li>
+      <li><strong>Monorepo (pnpm workspace).</strong> We may add a server later; retrofitting separate repos into a monorepo is painful, so set it up as a monorepo from the start.</li>
+      <li><strong>No server, no DB in v1.</strong></li>
+      <li><strong>Electron setup locked early (irreversible bits):</strong> getting it wrong is easy, and the cost is asymmetric — a bad install means either eternal bug-chasing or a catastrophic break (<code>appId</code>, user-data paths, keychain-encrypted secrets, and security flags can't be safely changed after release). If setup misbehaves, assume it was installed wrong. Find a reputable setup guide, vet where it comes from, confirm it's current as of 2026, and follow it religiously.</li>
+      <li><strong>Outlook is out of v1</strong></li>
+      <li><strong>Open source.</strong></li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>3. Constraints</h2>
+    <ul>
+      <li>No backend service; no database; nothing of ours runs continuously (v1).</li>
+      <li>Multi-account: N Gmail accounts, each independently authorized.</li>
+      <li>Bring-your-own-key: user supplies their own LLM key and their own Google OAuth client.</li>
+      <li>Free Gmail API quota only (personal-scale).</li>
+      <li>Google <strong>restricted-scope</strong> reality (<code>gmail.modify</code>, <code>gmail.settings.basic</code>, <code>gmail.readonly</code>): public distribution needs Google's CASA assessment. v1 lives in "testing" mode (≤100 users, 7-day refresh tokens) — no verification, no cost; CASA is a phase-2 gate.</li>
+      <li>The repo is guarded by <strong>opal-source</strong> (<code>opal init</code>) — no secrets or personal data reach the public remote.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>4. Architecture overview</h2>
+<pre><code>┌──────────────────────── Electron desktop app (local only) ───────────────────────────┐
+│  Renderer (React/TS)                                                                   │
+│   ├─ Unified inbox list  ── reads ──►  GmailClient (Gmail API, per account)             │
+│   └─ Right-sidebar Chat  ── command ─►  Agent                                           │
+│                                          │                                              │
+│                                          ▼                                              │
+│   Agent ── intent ──► AIProvider ──► RuleCompiler ──► FilterSpec                        │
+│                                                          │                              │
+│                                                          ▼                              │
+│                                          GmailClient.createFilter()  ─► Google enforces │
+│                                          GmailClient.bulkArchive/Trash() (existing mail)│
+│  Main process: OS keychain (OAuth tokens, LLM key). No DB.                              │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+Monorepo (pnpm workspace):
+  apps/desktop/    Electron + React/TS        ← v1
+  apps/server/     Node (empty stub)          ← phase-2 hosted tier
+  packages/shared/ TS types & interfaces      ← shared by desktop + future server</code></pre>
+  </section>
+
+  <section class="section">
+    <h2>5. The rule model</h2>
+    <ul>
+      <li><strong>New mail:</strong> a command becomes a <code>FilterSpec</code>, written to Gmail via <code>createFilter</code>. Google then applies that filter to every email that arrives afterward.</li>
+      <li><strong>Existing mail:</strong> filters never touch mail you already have, so a "hide X" command also runs <code>applyToBacklog</code> over current matches (archive / skip-inbox only in v1).</li>
+      <li><strong>"Hide" semantics:</strong> default = archive / skip-inbox (still searchable). Trash (explicit "delete") is phase 2.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>6. Safety</h2>
+    <ul>
+      <li><strong>Destructive bulk ops (bulk trash/delete) are out of v1</strong> — v1 does bulk archive only. When they land (phase 2) they require explicit chat confirmation showing the match count.</li>
+      <li><code>opal</code> guards the repo; CLAUDE.md secret/PII rules apply.</li>
+      <li>Desktop OAuth client secret is not truly secret (PKCE); still never committed (<code>.env</code> gitignored, keychain at runtime).</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>7. v1 build order</h2>
+    <ol>
+      <li><strong>opal-source guard.</strong> <code>opal init</code>; confirm no secrets or personal data can reach the public remote before any code lands — work safe from step one.</li>
+      <li><strong>Electron.</strong> Install and boot Electron from a vetted, 2026-current guide (setup is irreversible — see Decisions).</li>
+      <li><strong>Monorepo skeleton.</strong> pnpm workspace; shared types; server stub; keychain helper.</li>
+      <li><strong>Gmail auth + read.</strong> PKCE OAuth; list inbox; multi-account.</li>
+      <li><strong>Chat → filter.</strong> Chat compiles one intent; <code>createFilter</code>; verify in Gmail.</li>
+      <li><strong>Backlog + bulk.</strong> <code>applyToBacklog</code>; bulk archive (skip-inbox) only.</li>
+      <li><strong>Rule management</strong> (read back <code>filters.list</code>, undo where possible).</li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2>8. Phase 2 (post-v1, out of scope)</h2>
+    <ul>
+      <li>Outlook, <code>HostedProvider</code>, hosted tier, Google CASA verification.</li>
+      <li>Destructive bulk ops (bulk trash/delete of existing mail).</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>9. Tech stack</h2>
+    <p>Electron (Node main + React/TS renderer) · pnpm workspace monorepo · Gmail API · BYO LLM key · OS keychain (safeStorage) · opal-source (repo guard). No Rust.</p>
+  </section>
+
+</div>
+</body>
+</html>
