@@ -1,0 +1,8 @@
+{
+  "name": "@cleoinbox/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cleoinbox hosted tier — phase 2 (empty stub).",
+  "main": "./src/index.ts"
+}

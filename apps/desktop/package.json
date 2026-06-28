@@ -21,6 +21,7 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@cleoinbox/shared": "workspace:*",
     "@electron-toolkit/utils": "^4.0.0"
   },
   "devDependencies": {
