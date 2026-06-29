@@ -123,20 +123,24 @@ function runLoopbackFlow(
       })
 
       server.on('request', (req, res) => {
-        const reqUrl = new URL(req.url ?? '/', redirectUri)
-        if (reqUrl.pathname === '/favicon.ico') {
-          res.writeHead(204)
+        const params = new URL(req.url ?? '/', redirectUri).searchParams
+        const error = params.get('error')
+        const code = params.get('code')
+        // Ignore anything that isn't the OAuth redirect (favicon, a reload of
+        // "/"): respond empty and don't settle, so a stray hit can't show a
+        // false result page or hang the flow until timeout. Connection: close
+        // on every reply avoids a lingering keep-alive socket.
+        if (!error && !code) {
+          res.writeHead(204, { Connection: 'close' })
           res.end()
           return
         }
-        const error = reqUrl.searchParams.get('error')
-        const code = reqUrl.searchParams.get('code')
         res.writeHead(200, { 'Content-Type': 'text/html', Connection: 'close' })
         res.end(resultPage(!error))
         if (error) {
           finish(() => reject(new Error(`Google returned an error: ${error}`)))
-        } else if (code) {
-          finish(() => resolve({ code, codeVerifier: codes.codeVerifier, client }))
+        } else {
+          finish(() => resolve({ code: code as string, codeVerifier: codes.codeVerifier, client }))
         }
       })
 

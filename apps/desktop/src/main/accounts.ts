@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import type { Account } from '@cleoinbox/shared'
 
 // Non-secret per-account metadata (which inboxes are connected), persisted as
@@ -22,7 +22,12 @@ export function listAccounts(): Account[] {
 
 function save(accounts: Account[]): void {
   mkdirSync(app.getPath('userData'), { recursive: true })
-  writeFileSync(accountsFile(), JSON.stringify(accounts, null, 2))
+  // Write-then-rename so an interrupted or concurrent write can't leave a
+  // truncated file (which would parse-fail and silently drop every account).
+  const file = accountsFile()
+  const tmp = `${file}.${process.pid}.tmp`
+  writeFileSync(tmp, JSON.stringify(accounts, null, 2))
+  renameSync(tmp, file)
 }
 
 /** Add a connected account, or refresh its timestamp if already present. */

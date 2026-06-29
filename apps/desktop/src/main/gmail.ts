@@ -17,24 +17,34 @@ export async function listInbox(email: string, max = 25): Promise<InboxMessage[]
     maxResults: max
   })
 
-  const messages = await Promise.all(
-    (data.messages ?? []).map(({ id }) =>
+  const ids = (data.messages ?? []).flatMap((m) => (m.id ? [m.id] : []))
+  // Fetch each message independently — a message archived/deleted between the
+  // list and the get (or a transient per-message error) drops that one row
+  // instead of failing the whole inbox.
+  const results = await Promise.allSettled(
+    ids.map((id) =>
       client.users.messages.get({
         userId: 'me',
-        id: id ?? '',
+        id,
         format: 'metadata',
         metadataHeaders: ['From', 'Subject', 'Date']
       })
     )
   )
 
-  return messages.map(({ data: msg }) => ({
-    id: msg.id ?? '',
-    threadId: msg.threadId ?? '',
-    from: header(msg, 'From'),
-    subject: header(msg, 'Subject'),
-    date: header(msg, 'Date'),
-    unread: msg.labelIds?.includes('UNREAD') ?? false,
-    snippet: msg.snippet ?? ''
-  }))
+  const inbox: InboxMessage[] = []
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue
+    const msg = result.value.data
+    inbox.push({
+      id: msg.id ?? '',
+      threadId: msg.threadId ?? '',
+      from: header(msg, 'From'),
+      subject: header(msg, 'Subject'),
+      date: header(msg, 'Date'),
+      unread: msg.labelIds?.includes('UNREAD') ?? false,
+      snippet: msg.snippet ?? ''
+    })
+  }
+  return inbox
 }
