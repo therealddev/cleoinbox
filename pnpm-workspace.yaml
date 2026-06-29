@@ -6,3 +6,9 @@ allowBuilds:
   electron: true
   electron-winstaller: false
   esbuild: true
+
+# Dedupe google-auth-library to one version. @googleapis/gmail (via
+# googleapis-common) pins 10.5.0; our direct dep resolves newer. A single
+# version avoids two nominal OAuth2Client types that don't type-check together.
+overrides:
+  google-auth-library: 10.9.0

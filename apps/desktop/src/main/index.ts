@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { registerIpc } from './ipc'
 
 function createWindow(): void {
   // Create the browser window.
@@ -43,6 +44,9 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('io.github.therealddev.cleoinbox')
+
+  // Register the renderer↔main IPC surface (Gmail auth, accounts, inbox).
+  registerIpc()
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
